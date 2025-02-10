@@ -99,11 +99,11 @@ const LevelSystem = {
         
         // Clear existing objects
         gameState.bricks.forEach(brick => app.stage.removeChild(brick));
-        gameState.walls.forEach(wall => app.stage.removeChild(wall));
+        //gameState.walls.forEach(wall => app.stage.removeChild(wall));
         
         // Create new level objects
         gameState.bricks = this.createBricks(app, colors);
-        gameState.walls = this.createWalls(app);
+        //gameState.walls = this.createWalls(app);
         
         // Update level text
         levelText.text = `Level: ${this.currentLevel}`;
