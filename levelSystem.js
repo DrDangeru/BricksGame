@@ -46,22 +46,40 @@ const LevelSystem = {
     },
 
     // Create bricks based on level configuration
-    createBricks(app, colors) {
+    createBricks(app, colors, unbreakableBrickPositions) {
         const bricks = [];
         const levelConfig = this.levels[this.currentLevel];
+        const brickWidth = 40;
+        const brickHeight = 20;
         
         levelConfig.bricks.forEach((row, i) => {
             row.forEach((hasBrick, j) => {
                 if (hasBrick) {
-                    const brick = new PIXI.Graphics();
-                    brick.beginFill(colors[i]);
-                    brick.drawRect(0, 0, 40, 20);
-                    brick.endFill();
-                    brick.x = 80 + j * 45;
-                    brick.y = 60 + i * 30;
-                    brick.visible = true;
-                    app.stage.addChild(brick);
-                    bricks.push(brick);
+                    const x = 80 + j * 45;
+                    const y = 60 + i * 30;
+                    
+                    // Check if this position overlaps with any unbreakable brick
+                    // This calculates the pos of each unbreakable brick and compares to
+                    // the current position of a regular brick
+                    let overlap = false;
+                    for (const pos of unbreakableBrickPositions) {
+                        if (Math.abs(x - pos.x) < brickWidth && Math.abs(y - pos.y) < brickHeight) {
+                            overlap = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!overlap) {
+                        const brick = new PIXI.Graphics();
+                        brick.beginFill(colors[i]);
+                        brick.drawRect(0, 0, brickWidth, brickHeight);
+                        brick.endFill();
+                        brick.x = x;
+                        brick.y = y;
+                        brick.visible = true;
+                        app.stage.addChild(brick);
+                        bricks.push(brick);
+                    }
                 }
             });
         });
@@ -99,11 +117,70 @@ const LevelSystem = {
         
         // Clear existing objects
         gameState.bricks.forEach(brick => app.stage.removeChild(brick));
-        //gameState.walls.forEach(wall => app.stage.removeChild(wall));
+        gameState.boundaryBricks.forEach(brick => app.stage.removeChild(brick));
+        gameState.boundaryBricks = [];
         
-        // Create new level objects
-        gameState.bricks = this.createBricks(app, colors);
-        //gameState.walls = this.createWalls(app);
+        // Create random unbreakable bricks
+        const numBricks = Math.min(10 + this.currentLevel, 20); // Cap at 20 bricks maximum
+        const brickWidth = 40;
+        const brickHeight = 20;
+        const minX = 80; // Start after left boundary
+        const maxX = app.screen.width - 120; // End before right boundary
+        const minY = 40; // Start below top
+        const maxY = app.screen.height / 2; // Only in upper half of screen
+        const minDistance = 60; // Minimum distance between bricks
+        
+        const unbreakableBrickPositions = []; // Keep track of placed brick positions
+        
+        for (let i = 0; i < numBricks; i++) {
+            let validPosition = false;
+            let x, y;
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            while (!validPosition && attempts < maxAttempts) {
+                attempts++;
+                x = Math.floor(Math.random() * (maxX - minX) / brickWidth) * brickWidth + minX;
+                y = Math.floor(Math.random() * (maxY - minY) / brickHeight) * brickHeight + minY;
+                
+                // Check distance from all other placed bricks
+                validPosition = true;
+                for (const pos of unbreakableBrickPositions) {
+                    const distance = Math.sqrt(
+                        Math.pow(x - pos.x, 2) + 
+                        Math.pow(y - pos.y, 2)
+                    );
+                    if (distance < minDistance) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            }
+            
+            // If we couldn't find a valid position after max attempts, skip this brick
+            if (!validPosition) continue;
+            
+            // Create the unbreakable brick
+            const brick = new PIXI.Graphics();
+            brick.beginFill(0x8B4513);
+            brick.lineStyle(2, 0x4A2500);
+            brick.drawRect(0, 0, brickWidth, brickHeight);
+            brick.endFill();
+            brick.lineStyle(1, 0x4A2500, 0.5);
+            brick.moveTo(0, brickHeight/2);
+            brick.lineTo(brickWidth, brickHeight/2);
+            brick.moveTo(brickWidth/2, 0);
+            brick.lineTo(brickWidth/2, brickHeight);
+            brick.x = x;
+            brick.y = y;
+            brick.isUnbreakable = true;
+            app.stage.addChild(brick);
+            gameState.boundaryBricks.push(brick);
+            unbreakableBrickPositions.push({x, y});
+        }
+        
+        // Create new level objects, passing the unbreakable brick positions
+        gameState.bricks = this.createBricks(app, colors, unbreakableBrickPositions);
         
         // Update level text
         levelText.text = `Level: ${this.currentLevel}`;

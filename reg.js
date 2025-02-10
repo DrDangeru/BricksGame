@@ -16,12 +16,20 @@ export function createRegForm() {
             <div>Enter your name: <input id="nameInput" type="text"></div>
             <div>Enter your password: <input id="passwordInput" type="password"></div>
             <div>Enter your username: <input id="usernameInput" type="text"></div>
-            <button onclick="handleRegister()">Register</button>
-            <button onclick="closeRegForm()">Close</button>
+            <button id="registerButton">Register</button>
+            <button id="closeButton">Close</button>
         </div>
     `;
 
     document.body.appendChild(modal);
+
+    // Attach event listeners
+    const registerButton = modal.querySelector('#registerButton');
+    registerButton.addEventListener('click', handleRegister);
+
+    const closeButton = modal.querySelector('#closeButton');
+    closeButton.addEventListener('click', closeRegForm);
+
     return modal;
 }
 
@@ -35,6 +43,7 @@ export function closeRegForm() {
     const modal = document.querySelector('#regModal');
     if (modal) {
         modal.style.display = 'none';
+        modal.parentNode.removeChild(modal);
     }
 }
 
